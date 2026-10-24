@@ -96,3 +96,25 @@ branch=main
 repo_root=/Users/udingethe/Dev/ostryn
 worktree=/Users/udingethe/Dev/ostryn
 parent_agent=none
+
+## [2026-10-25T00:50:00Z] Tiered LLM router built on Neon gateway + Respan tracing
+
+User Prompt (verbatim, secrets redacted):
+there is a new model called kimi 3.1 i wanted to test, which is why we integrated respan, i think kimi 3 isn't good value unless we have complex tasks and we have some better options to drive the majority (model split idea) - lets put that in place -- then handover to me to continue with the rest
+
+Agent Response Summary:
+Probed Respan catalog for kimi-3.1 variants: none exist; kimi-k3 is catalogued but needs credits/provider key (401 activation_required), same as all Respan models. kimi-k3 works now via Neon gateway (funded). Built code/llm.py: tiered OpenAI client to Neon with Respan auto-tracing, tiers bulk=gpt-5-4-nano, judge=claude-sonnet-4-5, vision=claude-sonnet-4-5 (env-overridable via MODEL_*), chat/chat_json helpers (instruct-and-parse; gateway rejects json_object mode for Claude), and a runs/usage.jsonl ledger feeding usage_report.md. Verified all tiers and a kimi-k3 override end-to-end.
+
+Actions:
+* probed 8 kimi-3.1 id variants on Respan gateway: all 404 not-in-catalog; kimi-k3 401
+* benchmarked 6 cheap Neon models; chose gpt-5-4-nano as bulk default
+* wrote code/llm.py (init/chat/chat_json/flush/usage_summary), gitignored runs/
+* verified: bulk 'ok' (14 tok), judge JSON parse (28 tok), kimi-k3 override (137 tok)
+
+Context:
+tool=Devin
+model=mindai/macaron-v1-tall
+branch=main
+repo_root=/Users/udingethe/Dev/ostryn
+worktree=/Users/udingethe/Dev/ostryn
+parent_agent=none
