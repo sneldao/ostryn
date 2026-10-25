@@ -109,7 +109,7 @@ Residual gaps trace to generator-internal IDs absent from participant data
 
 ### Final state
 
-- Full 518-case run → root `output.csv` (159 COMPLETE / 349 INCOMPLETE / 10 NOT_APPLICABLE)
+- Full 518-case run → root `output.csv` (153 COMPLETE / 355 INCOMPLETE / 10 NOT_APPLICABLE)
 - `code/evaluation/evaluation_report.md` — metrics, 3 custom evaluation cases,
   failures found & improvements made
 - `code/evaluation/usage_report.md` — per-model calls/tokens/cost from `runs/usage.jsonl`
