@@ -252,3 +252,52 @@ branch=main
 repo_root=/Users/udingethe/Dev/ostryn
 worktree=main
 parent_agent=none
+
+## [2026-10-25T04:30:00Z] Strength assessment: rubric research, two output fixes, agent layer
+
+User Prompt (verbatim, secrets redacted):
+is this a strong entry or we could be doing more? we have circa 9 hours left
+(follow-up: shared a Tavily API key to research prior iterations; key kept in env only, never committed)
+
+Agent Response Summary:
+Researched HackerRank's own "Behind the Scenes" post: final score = 0.10 chat + 0.30 interview + 0.30 output CSV + 0.30 code zip; the code rubric's top dimension (30%) is "agent architecture — is this an agent or a hardcoded workflow with LLM calls". Judged the entry strong on output but weak on that axis, and the user approved the aggressive plan. Derived the gold verification rule from the 32 labels: on INCOMPLETE cases verify only acted-on resources plus the primary profile and policy-retained records — fixed (sample sequence 84.4→87.5%, precision 96.8%, ~10 spurious hidden steps removed). Found and fixed a real batch-linking bug: the nearest-reporter guard counted same-prefix claimants of any status, so adjacent batches of a different status starved matched cases of their account events — scoping it to same-result claimants restored accounts for 5+ hidden cases (e.g. case_146-148). Confirmed audit_record_6645/5569 and account_004 are generator-internal and not legitimately recoverable; brute-forced contested batch orderings (no consistent rule exists — left as documented residual). Built the agent layer: tools.py (AuditToolbox tool facade over the deterministic engine) + agent.py (LLM tool-calling loop on the judge tier with iteration cap, JSON-action validation, verdict-consistency guardrail, deterministic offline replay via ScriptedInvestigator); wired --agent/--offline into main.py; added retry/backoff to llm.chat. Live-ran the agent on 13 cases: 13/13 agreement, ~181k tokens (~$0.65). Regenerated output.csv (518 rows, validator clean, distribution unchanged), updated README/evaluation_report/usage_report, rebuilt code.zip (18 files, verified vs HEAD).
+
+Actions:
+* web research via Tavily + HackerRank blog (scoring rubric/weights)
+* derived gold verification-scope rule; edited code/audit.py assembly
+* fixed _nearest_reporter status-scoping in code/audit.py
+* created code/tools.py and code/agent.py; wired --agent flag in code/main.py; backoff retry in code/llm.py
+* ran agent on 13 cases (scripted + live): 13/13 parity; logged to runs/agent_transcripts.jsonl
+* regenerated output.csv; re-ran evaluation + validate_output.py
+* updated README.md, code/evaluation/evaluation_report.md, usage_report.md
+* commits d86cc46, 69bc0a9, b57110a; rebuilt code.zip (18 files)
+
+Context:
+tool=Devin CLI
+model=SWE-2 High
+branch=main
+repo_root=/Users/udingethe/Dev/ostryn
+worktree=main
+parent_agent=none
+
+## [2026-10-25T05:10:00Z] Extended agent parity run + interview prep sheet
+
+User Prompt (verbatim, secrets redacted):
+yes go ahead
+
+Agent Response Summary:
+Ran the live tool-calling investigator on 28 more diverse cases (random sample plus newly-restored account-link cases 146-148 and NA case_541): 28/28 verdicts agreed with the deterministic engine, zero divergences - cumulative live parity is 41/41. Drafted INTERVIEW_PREP.md keyed to the judge rubric (pitch, architecture deep-dive, design decisions, failure modes, numbers, AI-collaboration stories). Updated evaluation_report and usage_report to reflect 41/41 parity, rebuilt code.zip, committed.
+
+Actions:
+* .venv/bin/python code/main.py --agent (28 cases) -> 28/28 agreement, ~594k agent tokens total
+* wrote INTERVIEW_PREP.md
+* updated evaluation_report.md + usage_report.md parity stats
+* commit 0363687; rebuilt code.zip (18 files)
+
+Context:
+tool=Devin CLI
+model=SWE-2 High
+branch=main
+repo_root=/Users/udingethe/Dev/ostryn
+worktree=main
+parent_agent=none
