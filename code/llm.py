@@ -111,7 +111,16 @@ def chat(
     if temperature is not None:
         kwargs["temperature"] = temperature
     t0 = time.monotonic()
-    resp = _client.chat.completions.create(**kwargs)
+    # transient gateway failures get bounded exponential backoff; anything
+    # still failing after 3 tries propagates to the caller
+    for attempt in range(3):
+        try:
+            resp = _client.chat.completions.create(**kwargs)
+            break
+        except Exception:  # gateway/transport errors
+            if attempt == 2:
+                raise
+            time.sleep(2**attempt)
     _record(tier, model, resp.usage, tag, time.monotonic() - t0)
     return resp.choices[0].message.content or ""
 

@@ -22,6 +22,8 @@ code/
 ├── evidence.py          Parses every evidence format into typed observations
 ├── audit.py             Policy engine + state reconstruction + step assembler
 ├── llm.py               Tiered LLM client (Neon gateway, Respan-traced)
+├── tools.py             AuditToolbox: per-case investigative tools over the engine
+├── agent.py             AuditAgent: LLM tool-calling loop w/ guardrails + replay
 ├── respan_smoke.py      Standalone gateway/tracing wiring test
 └── evaluation/
     └── main.py          Scoring harness vs labelled sample answers
@@ -64,12 +66,25 @@ code/
    then the operation order from the problem statement, then `system_id`, `resource_id`.
    Proposed remediation and post-remediation verification steps use `evidence_id: ""`.
 
+### Agent layer (`agent.py` + `tools.py`)
+
+`AuditAgent` investigates one case per run through a tool-calling loop: the model
+chooses which tools to invoke (`classify_request`, `resolve_identity`,
+`linked_resources`, `inspect_resource`, `batch_activity`, `policy_assessment`),
+reads the observations, and finalizes with a verdict + rationale. Guardrails:
+12-iteration cap, JSON-action validation with a correction turn, and a verdict
+consistency check — the deterministic policy engine owns state reconstruction,
+so a contested `finalize` is challenged once and recorded as a divergence.
+`python3 code/main.py --agent case_01 case_09 ...` runs it (13/13 agreement with
+the engine on the validated set); `--agent --offline` replays the canonical tool
+sequence via `ScriptedInvestigator` as a parity check of the whole tool layer.
+
 ### LLM usage (`llm.py`)
 
 | Tier | Default model | Use |
 | --- | --- | --- |
 | `bulk` | `gpt-5-4-nano` | `request_text` intent classification (deletion vs access/correction/export/marketing) |
-| `judge` | `claude-sonnet-4-5` | Ambiguous-case verdicts |
+| `judge` | `claude-sonnet-4-5` | Agent investigator (per-case tool-calling loop) |
 | `vision` | `claude-sonnet-4-5` | PNG console evidence extraction |
 
 All calls go through the Neon AI Gateway and are auto-traced by Respan; every call is
@@ -98,11 +113,11 @@ cost). Overrides: `MODEL_BULK`, `MODEL_JUDGE`, `MODEL_VISION`.
 | Metric | Score |
 | --- | --- |
 | Status accuracy | **100%** (32/32) |
-| Field accuracy | 97.5% |
+| Field accuracy | 97.6% |
 | Evidence accuracy | 97.9% |
-| Step precision | 95.8% |
-| Step recall | 94.8% |
-| Sequence accuracy | 84.4% (27/32) |
+| Step precision | 96.8% |
+| Step recall | 95.3% |
+| Sequence accuracy | 87.5% (28/32) |
 
 Residual gaps trace to generator-internal IDs absent from participant data
 (see `code/evaluation/evaluation_report.md`).

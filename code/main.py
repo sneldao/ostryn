@@ -38,6 +38,58 @@ def run(*, include_samples: bool = False, offline: bool = False) -> list[CaseRes
     return [auditor.audit(c) for c in target]
 
 
+def run_agent(case_ids: list[str], offline: bool = False) -> int:
+    """Run the agentic investigator on the given cases and report agreement
+    with the deterministic policy engine. Tool calls and verdicts are logged
+    to runs/agent_transcripts.jsonl for review. With offline=True the
+    ScriptedInvestigator replays the canonical tool sequence instead — a
+    parity check of the whole tool layer that costs no model calls."""
+    import json
+
+    from agent import AuditAgent, ScriptedInvestigator
+    from tools import AuditToolbox
+
+    eval_cases = load_cases("deletion_requests.csv")
+    all_cases = load_cases("sample_deletion_requests.csv") + eval_cases
+    intent = classify_texts(
+        sorted({c.request_text for c in all_cases}), use_llm=not offline
+    )
+    na = {c.case_id for c in all_cases if intent.get(c.request_text, True) is False}
+    vision = load_cache() if offline else extract_all()
+    auditor = Auditor(all_cases, vision=vision, not_applicable=na)
+    toolbox = AuditToolbox(auditor, intent)
+    agent = ScriptedInvestigator(toolbox) if offline else AuditAgent(toolbox)
+
+    by_id = {c.case_id: c for c in all_cases}
+    out = REPO_ROOT / "runs" / "agent_transcripts.jsonl"
+    out.parent.mkdir(exist_ok=True)
+    agree = 0
+    with out.open("a") as f:
+        for cid in case_ids:
+            c = by_id[cid]
+            inv = agent.investigate(c)
+            engine = auditor.audit(c).status
+            agree += inv.verdict == engine
+            f.write(
+                json.dumps(
+                    {
+                        "case_id": cid,
+                        "verdict": inv.verdict,
+                        "engine": engine,
+                        "divergent": inv.divergent,
+                        "rationale": inv.rationale,
+                        "tool_calls": len(inv.transcript),
+                    }
+                )
+                + "\n"
+            )
+            print(
+                f"{cid}: agent={inv.verdict} engine={engine} divergent={inv.divergent}"
+            )
+    print(f"agreement: {agree}/{len(case_ids)}")
+    return 0
+
+
 def write_output(results: list[CaseResult], out_path: Path) -> None:
     rows = sorted(results, key=lambda r: r.case_id)
     with out_path.open("w", newline="", encoding="utf-8") as f:
@@ -51,7 +103,25 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--out", default=str(REPO_ROOT / "output.csv"))
+    ap.add_argument(
+        "--agent",
+        nargs="*",
+        metavar="CASE_ID",
+        help="run the agentic investigator on these cases instead of the "
+        "batch pipeline (default: first 8 eval cases)",
+    )
     args = ap.parse_args()
+    if args.agent is not None:
+        ids = (
+            args.agent
+            or [
+                r["case_id"]
+                for r in csv.DictReader(
+                    open(REPO_ROOT / "dataset" / "deletion_requests.csv")
+                )
+            ][:8]
+        )
+        raise SystemExit(run_agent(ids, offline=args.offline))
     results = run(include_samples=False, offline=args.offline)
     write_output(results, Path(args.out))
     print(f"Wrote {len(results)} rows to {args.out}")

@@ -8,7 +8,7 @@ Date: 2026-10-25 · Pipeline: `python3 code/main.py` (produces root `output.csv`
 | --- | --- | --- | --- |
 | `bulk` | Neon AI Gateway (OpenAI) | `gpt-5-4-nano` | request-intent classification (deletion vs access/correction/opt-out), one call per unique `request_text` |
 | `vision` | Neon AI Gateway (Anthropic) | `claude-sonnet-4-5` | PNG console evidence extraction, one call per image |
-| `judge` | Neon AI Gateway (Anthropic) | `claude-sonnet-4-5` | reserved for ambiguous-case verdicts (not triggered in the final run) |
+| `judge` | Neon AI Gateway (Anthropic) | `claude-sonnet-4-5` | agentic investigator: per-case tool-calling loop (`code/agent.py`) |
 | — | Neon AI Gateway (Moonshot) | `kimi-k3` | gateway smoke test during model bring-up |
 
 All calls are traced by Respan and appended to `runs/usage.jsonl`; the table below is
@@ -53,6 +53,14 @@ Per request (518 evaluation cases):
   reconstruction, policy application, step assembly) makes **no** LLM calls.
 - A cold run from an empty cache costs the full table above; every subsequent run of
   `code/main.py` is LLM-free and completes in seconds.
+
+## Agent-mode validation runs
+
+After the final artifacts were produced, `python3 code/main.py --agent ...` ran the
+live tool-calling investigator on 13 cases to verify parity with the deterministic
+engine (13/13 agreement). That validation cost 99 `claude-sonnet-4-5` calls —
+171,443 prompt + 9,231 completion tokens, ≈ $0.65 — and is **not** part of the
+output-producing run above.
 
 ## Determinism
 

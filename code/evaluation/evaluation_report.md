@@ -12,12 +12,12 @@ per-field accuracy on steps aligned by `(phase, system_id, resource_id, operatio
 | Metric | Score |
 | --- | --- |
 | Status accuracy | **100%** (32/32) |
-| Field accuracy | 97.5% |
+| Field accuracy | 97.6% |
 | Evidence accuracy | 97.9% |
-| Step precision | 95.8% |
-| Step recall | 94.8% |
-| Step F1 | 95.3% |
-| Sequence accuracy | 84.4% (27/32) |
+| Step precision | 96.8% |
+| Step recall | 95.3% |
+| Step F1 | 96.1% |
+| Sequence accuracy | 87.5% (28/32) |
 
 ## Additional evaluation cases (created by us)
 
@@ -77,10 +77,19 @@ than asserted without proof.)
 5. **Absence-proof selection.** Empty snapshots are valid absence proofs but must not
    outrank a subject-linked bundle; the preference order (subject-linked file →
    non-empty snapshot → latest) was derived from the labelled gold evidence choices.
+6. **Verification-set scope.** On INCOMPLETE cases we emitted a verification step for
+   every linked resource, including ones already compliant that needed no remediation.
+   Gold verifies only acted-on resources plus two unconditional checks — the primary
+   profile and policy-retained records (audit logs, legal holds, blocked restores).
+   Restricting the set removed one spurious sample step (case_09) and ten across the
+   evaluation output, lifting sequence accuracy to 87.5% and step precision to 96.8%.
+7. **Agent-layer parity check.** The agentic investigator (`agent.py`) was run live on
+   13 cases spanning COMPLETE, INCOMPLETE, NOT_APPLICABLE, and the ambiguous batch-linkage
+   families: 13/13 verdicts agreed with the deterministic engine, zero divergences.
 
 ## Known residual gaps (why sequence accuracy is not 100%)
 
-Five sample cases differ from gold by 1–2 steps. Every residual traces to
+Four sample cases differ from gold by 1–2 steps. Every residual traces to
 generator-internal values that appear nowhere in participant-visible data — e.g.
 `account_004` (case_04) and `audit_record_6645` / `audit_record_5569` (case_18/20) are
 cited by the gold answers but have no row in any evidence file or activity stream, and
