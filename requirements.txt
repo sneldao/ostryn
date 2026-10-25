@@ -1,3 +1,4 @@
 openai==3.37.0
+pypdf==5.1.0
 python-dotenv==1.2.4
 respan-ai==4.2.4
