@@ -194,3 +194,26 @@ branch=main
 repo_root=/Users/udingethe/Dev/ostryn
 worktree=main
 parent_agent=none
+
+## [2026-10-25T02:20:00Z] Ship LLM layers, final output.csv, evaluation reports
+
+User Prompt (verbatim, secrets redacted):
+ensure docs are up to date then stage, commit, push
+
+Agent Response Summary:
+Fixed batch-linkage regressions found by the harness (richness ordering inverted case_27-30 pairing; replaced with a nearest-reported_at guard plus status-result pairing; analytics claimant ordering by search-resource presence). Wired the LLM layers: vision pass over the 11 PNG consoles (claude-sonnet-4-5, cached per file_id) and intent classification over all 398 unique request texts (gpt-5-4-nano, cached) - after fixing a prompt-template crash (str.format on literal JSON braces) that had silently disabled the LLM path, and adding an audit-follow-up override (verify/confirm phrasings are authorized deletions). Sample metrics improved to 100% status / 97.5% field / 97.9% evidence / 95.8% step precision / 84.4% sequence; residual gaps are generator-internal IDs absent from participant data. Produced the final output.csv (518 rows: 159 COMPLETE / 349 INCOMPLETE / 10 NOT_APPLICABLE), wrote evaluation/evaluation_report.md (metrics + 3 verified custom cases + failures/improvements) and evaluation/usage_report.md (406 calls, ~104k tokens, ~$0.14). Updated README progress to final state. Staged, committed, pushed.
+
+Actions:
+* fixed audit.py batch assignment (nearest-reporter guard, ordering preservation)
+* created code/intent.py and code/vision.py; wired into code/main.py
+* fixed RETAIN verification evidence handling (drop only on COMPLETE)
+* ran full 518-case run; wrote code/evaluation/evaluation_report.md and usage_report.md
+* updated README.md; appended log entry; git add/commit/push
+
+Context:
+tool=AdaL
+model=gemini-4-argon
+branch=main
+repo_root=/Users/udingethe/Dev/ostryn
+worktree=main
+parent_agent=none

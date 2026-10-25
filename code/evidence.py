@@ -200,10 +200,22 @@ def _parse_sql(path: Path, fid: str, avail: str) -> list[Obs]:
         scope = {r[0] for r in con.execute("select origin_system from snapshot_scope")}
         coverage["snapshot_scope"] = scope
     SQL_COVERAGE[fid] = (cap, set().union(*coverage.values()) if coverage else set())
+    prof_tables = [t for t in tables if t.startswith("customer_profiles")]
+    if prof_tables:
+        non_empty = any(
+            con.execute(f'select count(*) from "{t}"').fetchone()[0] > 0
+            for t in prof_tables
+        )
+        if "account_service" in SQL_COVERAGE[fid][1] or prof_tables:
+            PROFILES_COVERAGE[fid] = (cap, non_empty)
     return out
 
 
 SQL_COVERAGE: dict[str, tuple[str, set[str]]] = {}
+
+# files whose snapshot covers the account_service profile store:
+#   fid -> (captured_at, non_empty)  — used for absence-by-omission proofs
+PROFILES_COVERAGE: dict[str, tuple[str, bool]] = {}
 
 # -------------------------------------------------------------------------- JSON
 
@@ -233,6 +245,17 @@ def _parse_json(path: Path, fid: str, avail: str) -> list[Obs]:
     top_t = data.get("exported_at") or data.get("captured_at") or avail
     acc: list = []
     _walk_json(data, top_t, None, acc)
+    # register account-service profile coverage from snapshot bundles
+    for snap in data.get("snapshots", []) or []:
+        if (
+            isinstance(snap, dict)
+            and snap.get("data_store") == "account_service"
+            and snap.get("collection") == "customer_profiles"
+        ):
+            cap = snap.get("captured_at") or top_t
+            non_empty = bool(snap.get("records"))
+            if fid not in PROFILES_COVERAGE or cap > PROFILES_COVERAGE[fid][0]:
+                PROFILES_COVERAGE[fid] = (cap, non_empty)
     out = []
     for t, _store, node in acc:
         rec = _flatten(node)

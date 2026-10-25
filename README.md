@@ -87,32 +87,37 @@ cost). Overrides: `MODEL_BULK`, `MODEL_JUDGE`, `MODEL_VISION`.
 - ✅ Policy engine covering all 15 `deletion_rules.csv` categories
 - ✅ Deterministic step assembler conforming to the output contract (§6.3–6.4)
 - ✅ Scoring harness with per-case verbose diffs
+- ✅ LLM intent classification (bulk tier, cached) — detects the 10 `NOT_APPLICABLE`
+  requests (case_533–542); audit-follow-up phrasings handled by rule
+- ✅ LLM vision pass over the 11 PNG consoles (vision tier, cached per `file_id`)
 - ✅ Dataset deep-dive: generator linkage patterns identified (worker-batch windows,
-  account/analytics/tombstone pairing), decoy corpora mapped (e.g. `evidence_53`'s 300
-  unrelated lookups, `evidence_90`'s empty-snapshot absence proof)
+  status↔result pairing, analytics ordering), decoy corpora mapped
 
 ### Sample evaluation (32 labelled cases)
 
 | Metric | Score |
 | --- | --- |
 | Status accuracy | **100%** (32/32) |
-| Field accuracy | 95.4% |
-| Evidence accuracy | 95.9% |
-| Step precision | 90.1% |
-| Step recall | 89.6% |
-| Sequence accuracy | 62.5% |
+| Field accuracy | 97.5% |
+| Evidence accuracy | 97.9% |
+| Step precision | 95.8% |
+| Step recall | 94.8% |
+| Sequence accuracy | 84.4% (27/32) |
 
-Residual step-level gaps trace to a small number of cases whose gold steps include
-security-audit records and batch-linked resources; these are the active work items below.
+Residual gaps trace to generator-internal IDs absent from participant data
+(see `code/evaluation/evaluation_report.md`).
 
-### In progress / next
+### Final state
 
-1. Exact-order assembly for the handful of batch-linked sample cases
-2. LLM intent classification for `NOT_APPLICABLE` requests (≈10 known non-deletion texts)
-3. Vision extraction pass over the 11 PNG consoles (cached to disk)
-4. Full 518-case run → root `output.csv`
-5. `code/evaluation/evaluation_report.md` + `code/evaluation/usage_report.md`
-6. Package `code.zip` (excludes `dataset/`, `.venv/`, `runs/`)
+- Full 518-case run → root `output.csv` (159 COMPLETE / 349 INCOMPLETE / 10 NOT_APPLICABLE)
+- `code/evaluation/evaluation_report.md` — metrics, 3 custom evaluation cases,
+  failures found & improvements made
+- `code/evaluation/usage_report.md` — per-model calls/tokens/cost from `runs/usage.jsonl`
+  (406 calls, ~104k tokens, ≈$0.14 total)
+
+### Remaining
+
+1. Package `code.zip` (excludes `dataset/`, `.venv/`, `runs/`) and submit
 
 ---
 

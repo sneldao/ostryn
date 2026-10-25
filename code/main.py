@@ -1,7 +1,8 @@
 """Entry point for Ostryn — Ghost Data Still Exists deletion-audit agent.
 
 Usage:
-    python3 code/main.py
+    python3 code/main.py                # full run -> output.csv (518 rows)
+    python3 code/main.py --offline      # deterministic only, no LLM calls
 """
 
 from __future__ import annotations
@@ -10,27 +11,28 @@ import argparse
 import csv
 from pathlib import Path
 
-from audit import Auditor, Case, CaseResult, load_cases, steps_json
+from audit import Auditor, CaseResult, load_cases, steps_json
+from intent import classify_texts
+from vision import extract_all
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def _case_sort_key(cid: str) -> tuple[int, str]:
-    parts = cid.split("_")
-    if len(parts) == 2 and parts[1].isdigit():
-        return (0, cid)
-    return (1, cid)
-
-
-def run(
-    *,
-    include_samples: bool = False,
-    offline: bool = False,
-) -> list[CaseResult]:
+def run(*, include_samples: bool = False, offline: bool = False) -> list[CaseResult]:
     sample_cases = load_cases("sample_deletion_requests.csv")
     eval_cases = load_cases("deletion_requests.csv")
-    all_cases: list[Case] = sample_cases + eval_cases
-    auditor = Auditor(all_cases)
+    all_cases = sample_cases + eval_cases
+
+    # 1. intent: which requests authorize deletion at all
+    intent = classify_texts(
+        sorted({c.request_text for c in all_cases}), use_llm=not offline
+    )
+    na = {c.case_id for c in all_cases if intent.get(c.request_text, True) is False}
+
+    # 2. vision: structured records from PNG consoles (cached)
+    vision = None if offline else extract_all()
+
+    auditor = Auditor(all_cases, vision=vision, not_applicable=na)
     target = all_cases if include_samples else eval_cases
     return [auditor.audit(c) for c in target]
 
