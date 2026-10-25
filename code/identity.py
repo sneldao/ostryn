@@ -8,6 +8,7 @@ names are returned so evidence written under an old identifier still links.
 from __future__ import annotations
 
 import csv
+import hashlib
 from dataclasses import dataclass, field
 
 from evidence import DATASET
@@ -76,4 +77,7 @@ class IdentityIndex:
                 for v in (a["old_value"], a["new_value"]):
                     if v:
                         bucket.add(v.lower())
+        # email_hash is sha256(lower(email)) in user_identities.csv, so evidence
+        # keyed by the hash of any current or historical address links as well
+        ident.hashes |= {hashlib.sha256(e.encode()).hexdigest() for e in ident.emails}
         return ident
