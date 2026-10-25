@@ -386,6 +386,7 @@ class Auditor:
             if a["source_system"] == "deletion_worker":
                 self.rid_worker_times[a["resource_id"]].append(a["event_time"])
         self._link_by_batch()
+        self._link_accounts_by_elimination()
 
     # ---- linking -------------------------------------------------------
 
@@ -503,6 +504,59 @@ class Auditor:
                     and self._nearest_reporter(a, prefix=prefix)
                 ]
                 self._assign(need, pool, by_status=False)
+
+    # profile deletions identity-linked to a case all fall within this window
+    # around its reported_at (observed: -1.25h .. +0.25h across 485 cases)
+    PROFILE_WINDOW = (timedelta(hours=-1.5), timedelta(hours=0.5))
+
+    def _link_accounts_by_elimination(self) -> None:
+        """Second pass for cases still without a primary profile.
+
+        Candidate pairs need a profile-deletion event inside PROFILE_WINDOW of the
+        case's reported_at whose worker result matches the reported status. A pair
+        is linked only when it is mutually unique (the case has one candidate and
+        the event has one claimant); repeated until nothing changes. Ambiguous
+        batches stay unlinked rather than guessed."""
+        lo, hi = self.PROFILE_WINDOW
+        need = [
+            c
+            for c in self.cases
+            if c.case_id not in self.na and not self._has_prefix(c, "account")
+        ]
+        pool = [
+            a
+            for a in self.activity
+            if a["source_system"] == "deletion_worker"
+            and a["target_system"] == "account_service"
+            and a["event_type"] == "DELETE_RECORD"
+            and a["resource_id"] not in self.claimed
+        ]
+        cand: dict[str, set[str]] = defaultdict(set)
+        for c in need:
+            rep = _ts(c.reported_at)
+            want = RESULT_FOR_STATUS.get(c.reported_status)
+            for a in pool:
+                d = _ts(a["event_time"]) - rep
+                if lo <= d <= hi and a["reported_result"] == want:
+                    cand[c.case_id].add(a["resource_id"])
+        by_case = {c.case_id: c for c in need}
+        changed = True
+        while changed:
+            changed = False
+            claimants: dict[str, set[str]] = defaultdict(set)
+            for cid, rids in cand.items():
+                for r in rids:
+                    claimants[r].add(cid)
+            for cid, rids in sorted(cand.items()):
+                if len(rids) == 1:
+                    (r,) = rids
+                    if claimants[r] == {cid}:
+                        self._claim(by_case[cid], r)
+                        del cand[cid]
+                        for other in cand.values():
+                            other.discard(r)
+                        changed = True
+                        break
 
     def _nearest_reporter(self, event: dict, prefix: str) -> bool:
         """True when the case batch currently being processed contains a case
