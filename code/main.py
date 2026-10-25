@@ -2,7 +2,7 @@
 
 Usage:
     python3 code/main.py                # full run -> output.csv (518 rows)
-    python3 code/main.py --offline      # deterministic only, no LLM calls
+    python3 code/main.py --offline      # no LLM calls: cached intent/vision results only
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from pathlib import Path
 
 from audit import Auditor, CaseResult, load_cases, steps_json
 from intent import classify_texts
-from vision import extract_all
+from vision import extract_all, load_cache
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -29,8 +29,9 @@ def run(*, include_samples: bool = False, offline: bool = False) -> list[CaseRes
     )
     na = {c.case_id for c in all_cases if intent.get(c.request_text, True) is False}
 
-    # 2. vision: structured records from PNG consoles (cached)
-    vision = None if offline else extract_all()
+    # 2. vision: structured records from PNG consoles (cached per file_id;
+    #    offline runs reuse the cache and never call a model)
+    vision = load_cache() if offline else extract_all()
 
     auditor = Auditor(all_cases, vision=vision, not_applicable=na)
     target = all_cases if include_samples else eval_cases

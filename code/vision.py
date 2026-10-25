@@ -19,25 +19,42 @@ from evidence import DATASET, load_manifest
 
 CACHE = Path(__file__).resolve().parent.parent / "runs" / "vision_cache.json"
 
-PROMPT = """Read every data row shown in this admin console screenshot.
+PROMPT_VERSION = 2
+PROMPT = """Read this internal admin-console screenshot. Extract the page's primary
+entity and every data row as structured records.
 Return JSON only:
-{"records": [{"resource_id": "...", "system": "...", "state": "...",
-              "email": "...|null", "phone": "...|null", "email_hash": "...|null",
-              "name": "...|null", "user_reference": "...|null", "detail": "..."}]}
+{"records": [{"resource_id": "...", "aliases": ["..."], "status": "...",
+              "email": "...|null", "phone": "...|null", "name": "...|null",
+              "user_reference": "...|null", "detail": "..."}]}
 
 Rules:
-- resource_id is the exact id string in the row (e.g. account_123, search_45).
-- state is the row's status exactly as displayed (e.g. FOUND, NOT_FOUND,
-  ANONYMIZED, IDENTIFIABLE, ACTIVE, BLOCKED, DISABLED, DELETED).
-- omit rows without a resource id. Use null for unknown fields."""
+- First record: the primary entity in the page header / subtitle / detail panel.
+  Its resource_id is the internal id shown there in the form word_digits
+  (e.g. support_1034, account_5762, analytics_7438, data_flow_1121, backup_9287,
+  marketing_001). If the only id shown is a customer key such as user_17, use it.
+  Put every other id or reference displayed for it (ticket number, order id,
+  file name, user id) in aliases.
+- Then one record per table row; resource_id is that row's own id, file name or
+  reference exactly as displayed; aliases lists other ids shown in the row.
+- status is the row's / entity's status text exactly as displayed (e.g. Live,
+  Healthy, Ready, FOUND, Active, Archive, Valid, Retained reference); null if none.
+- email, phone, name, user_reference: only values actually displayed for that
+  record (user_reference is a user_<digits> id); null otherwise. Never invent.
+- detail: short free text with any other displayed facts (dates, retention end,
+  restore activity, opt-in state)."""
 
 
 def _b64(p: Path) -> str:
     return base64.b64encode(p.read_bytes()).decode()
 
 
+def load_cache() -> dict[str, dict]:
+    """Cached extractions only (no model calls) — used by offline runs."""
+    return json.loads(CACHE.read_text()) if CACHE.exists() else {}
+
+
 def extract_all(force: bool = False) -> dict[str, dict]:
-    cache = {} if force or not CACHE.exists() else json.loads(CACHE.read_text())
+    cache = {} if force else load_cache()
     from llm import chat_json, flush
 
     todo = []
@@ -45,7 +62,7 @@ def extract_all(force: bool = False) -> dict[str, dict]:
         fid, rel = row["file_id"], row["file_path"]
         if not rel.lower().endswith((".png", ".jpg", ".jpeg")):
             continue
-        if fid not in cache:
+        if cache.get(fid, {}).get("v") != PROMPT_VERSION:
             todo.append((fid, rel, row["captured_at"]))
     for fid, rel, _cap in todo:
         p = DATASET / rel
@@ -70,9 +87,12 @@ def extract_all(force: bool = False) -> dict[str, dict]:
                 max_tokens=2000,
             )
             records = res.get("records", []) if isinstance(res, dict) else []
-        except Exception:
-            records = []
-        cache[fid] = {"records": records}
+        except (
+            Exception
+        ) as exc:  # transient failure: keep the old entry, retry next run
+            print(f"vision extraction failed for {fid}: {type(exc).__name__}")
+            continue
+        cache[fid] = {"v": PROMPT_VERSION, "records": records}
     if todo:
         CACHE.parent.mkdir(exist_ok=True)
         CACHE.write_text(json.dumps(cache, ensure_ascii=False, indent=1))

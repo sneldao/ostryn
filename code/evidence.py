@@ -416,13 +416,81 @@ def _parse_pdf(path: Path, fid: str, avail: str, aliases: dict[str, str]) -> lis
 # ------------------------------------------------------------------------ IMAGES
 
 
-def _parse_vision(fid: str, avail: str, extraction: dict) -> list[Obs]:
-    out = []
-    for rec in extraction.get("records", []):
-        rid = rec.get("resource_id")
-        if not rid or not RESOURCE_RE.fullmatch(str(rid)):
+_ABSENT_WORDS = ("not found", "not_found", "deleted", "removed", "purged", "absent")
+_OFF_WORDS = ("disabled", "paused", "stopped", "inactive", "suspended", "off")
+
+
+def _vision_rid(rec: dict, origin: str, aliases: dict[str, str]) -> str | None:
+    """Resolve a console record to a canonical resource id.
+
+    Consoles often headline a record by a display alias (ticket number, file
+    name, customer key). The record's own id wins when shown; otherwise a
+    data-catalog LINK_RESOURCE_IDENTITY alias resolves it. A bare user_<n> key is
+    only accepted when the catalogued resource lives in the console's system."""
+    cands = [rec.get("resource_id")] + list(rec.get("aliases") or [])
+    cands = [str(c).strip() for c in cands if c]
+    for c in cands:
+        if RESOURCE_RE.fullmatch(c):
+            return c
+    for c in cands:
+        rid = aliases.get(c)
+        if not rid:
             continue
-        rec = {k.lower(): v for k, v in rec.items()}
+        if USER_RE.fullmatch(c) and system_of(rid) != origin:
+            continue
+        return rid
+    return None
+
+
+def _vision_state(rid: str, rec: dict) -> dict[str, Any]:
+    """Translate a console's displayed status into the state fields that
+    audit.compliant() understands. A record shown in a live console exists."""
+    status = str(rec.get("status") or "").strip().lower()
+    out: dict[str, Any] = {"console_status": status or None}
+    p = prefix_of(rid)
+    if any(w in status for w in _ABSENT_WORDS):
+        out["result"] = "NOT_FOUND"
+    elif "anonymi" in status:
+        out["result"] = "ANONYMIZED"
+    elif "redact" in status:
+        out["result"] = "REDACTED"
+    elif p == "data_flow":
+        out["enabled"] = not any(w in status for w in _OFF_WORDS)
+    elif p == "backup":
+        out["restore_allowed"] = not ("block" in status or "deny" in status)
+    return out
+
+
+def _parse_vision(
+    fid: str, avail: str, extraction: dict, origin: str = "", aliases=None
+) -> list[Obs]:
+    aliases = aliases or {}
+    merged: dict[str, dict] = {}
+    for raw in extraction.get("records", []):
+        if not isinstance(raw, dict):
+            continue
+        raw = {k.lower(): v for k, v in raw.items()}
+        rid = _vision_rid(raw, origin, aliases)
+        if not rid:
+            continue
+        rec = {k: v for k, v in raw.items() if k != "aliases"}
+        rec["resource_id"] = rid
+        if rec.get("user_reference"):
+            rec["user_id"] = rec["user_reference"]
+        if rec.get("state") and not rec.get("status"):
+            rec["status"] = rec["state"]  # v1 cache entries
+        rec.pop("state", None)
+        rec.update(_vision_state(rid, rec))
+        rec.pop("status", None)
+        prev = merged.get(rid)
+        if prev is None:
+            merged[rid] = rec
+        else:  # the same resource shown twice (header + row): keep every fact
+            for k, v in rec.items():
+                if prev.get(k) in (None, "") and v not in (None, ""):
+                    prev[k] = v
+    out = []
+    for rid, rec in merged.items():
         out.append(
             Obs(
                 fid,
@@ -548,6 +616,6 @@ def load_all(vision: dict[str, dict] | None = None) -> tuple[list[Obs], list[dic
         elif suf == ".pdf":
             obs += _parse_pdf(p, fid, avail, aliases)
         elif suf in {".png", ".jpg", ".jpeg"} and vision and fid in vision:
-            obs += _parse_vision(fid, avail, vision[fid])
+            obs += _parse_vision(fid, avail, vision[fid], row["origin"], aliases)
     obs += activity_obs(activity)
     return obs, activity
