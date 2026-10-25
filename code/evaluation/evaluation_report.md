@@ -91,8 +91,9 @@ than asserted without proof.)
    the guard to same-result claimants restored primary profiles for the affected
    evaluation cases (e.g. case_146–148).
 8. **Agent-layer parity check.** The agentic investigator (`agent.py`) was run live on
-   13 cases spanning COMPLETE, INCOMPLETE, NOT_APPLICABLE, and the ambiguous batch-linkage
-   families: 13/13 verdicts agreed with the deterministic engine, zero divergences.
+   41 cases spanning COMPLETE, INCOMPLETE, NOT_APPLICABLE, ambiguous batch-linkage
+   families, and newly-restored account links: 41/41 verdicts agreed with the
+   deterministic engine, zero divergences.
 
 ## Known residual gaps (why sequence accuracy is not 100%)
 

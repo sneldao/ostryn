@@ -57,9 +57,8 @@ Per request (518 evaluation cases):
 ## Agent-mode validation runs
 
 After the final artifacts were produced, `python3 code/main.py --agent ...` ran the
-live tool-calling investigator on 13 cases to verify parity with the deterministic
-engine (13/13 agreement). That validation cost 99 `claude-sonnet-4-5` calls —
-171,443 prompt + 9,231 completion tokens, ≈ $0.65 — and is **not** part of the
+live tool-calling investigator on 41 cases to verify parity with the deterministic
+engine (41/41 agreement). Those validation calls are **not** part of the
 output-producing run above.
 
 ## Determinism
