@@ -601,6 +601,7 @@ class Auditor:
         1. a snapshot file that also contains other subject-linked resources
         2. among the rest, the latest snapshot that is non-empty
         3. otherwise the latest snapshot of any kind
+        4. failing all of these, a SQL snapshot that holds account_service rows
         """
         linked_files = {
             o.evidence_id
@@ -615,6 +616,16 @@ class Auditor:
             and cap >= c.requested_at
             and not any(o.evidence_id == fid for o in self.by_rid.get(rid, []))
         ]
+        if not cands:
+            # fallback: any SQL snapshot whose tables hold account_service rows
+            # covers the profile store too, so omission there is also a proof
+            cands = [
+                (fid, cap, True)
+                for fid, (cap, systems) in E.SQL_COVERAGE.items()
+                if "account_service" in systems
+                and c.requested_at <= cap <= c.audit_at
+                and not any(o.evidence_id == fid for o in self.by_rid.get(rid, []))
+            ]
         if not cands:
             return ""
         linked = [x for x in cands if x[0] in linked_files]
