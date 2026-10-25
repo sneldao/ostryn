@@ -569,6 +569,13 @@ class Auditor:
         for c in self.cases:
             if c.case_id in self.na or self._has_prefix(c, prefix):
                 continue
+            # primary-profile claims are status-paired: only cases whose
+            # reported status maps to this event's result can compete for it
+            if (
+                prefix == "account"
+                and RESULT_FOR_STATUS.get(c.reported_status) != event["reported_result"]
+            ):
+                continue
             d = abs((_ts(c.reported_at) - t).total_seconds())
             if best is None or d < best:
                 best = d

@@ -83,7 +83,14 @@ than asserted without proof.)
    profile and policy-retained records (audit logs, legal holds, blocked restores).
    Restricting the set removed one spurious sample step (case_09) and ten across the
    evaluation output, lifting sequence accuracy to 87.5% and step precision to 96.8%.
-7. **Agent-layer parity check.** The agentic investigator (`agent.py`) was run live on
+7. **Status-matched batch competition.** The nearest-reporter guard that stops
+   neighbouring batches stealing each other's primary-profile events counted every
+   still-unlinked case as a competitor regardless of status. A NOT_STARTED batch
+   next to a PARTIALLY_COMPLETE one therefore blocked PARTIAL events it could never
+   claim, starving the matched batch's cases of any account link at all. Scoping
+   the guard to same-result claimants restored primary profiles for the affected
+   evaluation cases (e.g. case_146–148).
+8. **Agent-layer parity check.** The agentic investigator (`agent.py`) was run live on
    13 cases spanning COMPLETE, INCOMPLETE, NOT_APPLICABLE, and the ambiguous batch-linkage
    families: 13/13 verdicts agreed with the deterministic engine, zero divergences.
 
