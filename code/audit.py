@@ -711,9 +711,25 @@ class Auditor:
             if not v.ok and f_op:
                 raw.append((f_op, v.system_id, v.resource_id, v.evidence_id))
                 raw.append((r_op, v.system_id, v.resource_id, ""))
-            raw.append(
-                (v_op, v.system_id, v.resource_id, v.evidence_id if complete else "")
+            # COMPLETE: every linked resource gets an evidence-backed check.
+            # INCOMPLETE: post-remediation checks only for resources that needed
+            # action, plus the unconditional pair — the primary profile and
+            # policy-retained records (audit logs, legal holds, blocked backups).
+            needs_check = (
+                complete
+                or not v.ok
+                or v.system_id == "account_service"
+                or v.treatment in ("RETAIN", "BLOCK")
             )
+            if needs_check:
+                raw.append(
+                    (
+                        v_op,
+                        v.system_id,
+                        v.resource_id,
+                        v.evidence_id if complete else "",
+                    )
+                )
         raw.sort(key=lambda s: (OP_ORDER.index(s[0]), s[1], s[2]))
         steps = [
             {
