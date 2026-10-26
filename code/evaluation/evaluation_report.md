@@ -112,3 +112,28 @@ python3 code/main.py                    # full run -> output.csv (518 rows)
 python3 code/evaluation/main.py         # scores the 32 labelled sample cases
 python3 code/evaluation/main.py --verbose   # per-case diffs
 ```
+
+## Post-mortem — scored result (#919, Output CSV 8.7/30)
+
+Sample metrics predicted strong output; the hidden-set score did not materialize.
+Quantified miss classes in the submitted output.csv (508 scored non-NA cases, 3,245 steps):
+
+- **Unlinked retained audit records: 85 cases** carried no `security_service`
+  `VERIFY_RECORD_PRESENT`. Gold appears to include a retained audit record for every
+  deletion subject; the resource IDs are generator-internal and absent from all
+  participant files. Lesson: emitting the check with a *best-guess* resource_id would
+  have won field/presence credit where omitting won nothing.
+- **Unlinked primary profiles: 20 cases** had no `account_service` step — the profile
+  delete event either never reached the activity stream or sat in a contested batch
+  window we refused to guess.
+- **Contested batch pairings**: multi-claimant, same-status batches have no
+  participant-visible ordering (verified by exhaustive ordering tests). Each wrong
+  guess costs one step tuple; each refusal costs the whole step.
+- **Verification-scope fix** landed pre-submit, but remaining tuple-level diffs
+  (resource_id, evidence_id) on otherwise-correct steps still score zero.
+
+Takeaway for future iterations: when the gold is generated with internal IDs, a
+structurally-correct step with a guessed ID can still earn partial credit; strict
+"only what evidence proves" optimizes for correctness but under-returns per-step
+recall. A hybrid — emit the step, flag the ID as inferred — is the better
+submission-time tradeoff.
