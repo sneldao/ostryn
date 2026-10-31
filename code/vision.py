@@ -15,7 +15,8 @@ import base64
 import json
 from pathlib import Path
 
-from evidence import DATASET, load_manifest
+from datasource import src
+from evidence import load_manifest
 
 CACHE = Path(__file__).resolve().parent.parent / "runs" / "vision_cache.json"
 
@@ -44,8 +45,8 @@ Rules:
   restore activity, opt-in state)."""
 
 
-def _b64(p: Path) -> str:
-    return base64.b64encode(p.read_bytes()).decode()
+def _b64(rel: str) -> str:
+    return base64.b64encode(src.file_bytes(rel)).decode()
 
 
 def load_cache() -> dict[str, dict]:
@@ -65,7 +66,6 @@ def extract_all(force: bool = False) -> dict[str, dict]:
         if cache.get(fid, {}).get("v") != PROMPT_VERSION:
             todo.append((fid, rel, row["captured_at"]))
     for fid, rel, _cap in todo:
-        p = DATASET / rel
         try:
             res = chat_json(
                 "vision",
@@ -77,7 +77,7 @@ def extract_all(force: bool = False) -> dict[str, dict]:
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:image/png;base64,{_b64(p)}"
+                                    "url": f"data:image/png;base64,{_b64(rel)}"
                                 },
                             },
                         ],

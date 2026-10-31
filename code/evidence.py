@@ -18,7 +18,6 @@ against the subject's resolved identifiers.
 
 from __future__ import annotations
 
-import csv
 import json
 import re
 import sqlite3
@@ -26,8 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-DATASET = REPO_ROOT / "dataset"
+from datasource import src
 
 RESOURCE_RE = re.compile(
     r"\b(account|search|analytics|support|export|data_flow|backup|audit_record|"
@@ -156,8 +154,7 @@ def _flatten(d: dict, out: dict | None = None) -> dict:
 # --------------------------------------------------------------------------- SQL
 
 
-def _parse_sql(path: Path, fid: str, avail: str) -> list[Obs]:
-    text = path.read_text()
+def _parse_sql(text: str, fid: str, avail: str) -> list[Obs]:
     m = re.search(r"Captured at:\s*(\S+)", text) or re.search(
         r"snapshot_completed_at=(\S+)", text
     )
@@ -240,8 +237,8 @@ def _walk_json(node: Any, t: str | None, store: str | None, acc: list):
             _walk_json(v, t, store, acc)
 
 
-def _parse_json(path: Path, fid: str, avail: str) -> list[Obs]:
-    data = json.loads(path.read_text())
+def _parse_json(text: str, fid: str, avail: str) -> list[Obs]:
+    data = json.loads(text)
     top_t = data.get("exported_at") or data.get("captured_at") or avail
     acc: list = []
     _walk_json(data, top_t, None, acc)
@@ -287,9 +284,9 @@ def _parse_json(path: Path, fid: str, avail: str) -> list[Obs]:
 # --------------------------------------------------------------------------- TXT
 
 
-def _parse_txt(path: Path, fid: str, avail: str) -> list[Obs]:
+def _parse_txt(text: str, fid: str, avail: str) -> list[Obs]:
     out = []
-    for line in path.read_text().splitlines():
+    for line in text.splitlines():
         line = line.strip()
         if not line.startswith("- "):
             continue
@@ -326,10 +323,10 @@ def _kv_line(line: str) -> dict[str, str]:
     return kv
 
 
-def _parse_log(path: Path, fid: str, avail: str) -> list[Obs]:
+def _parse_log(text: str, fid: str, avail: str) -> list[Obs]:
     traces: dict[str, list[tuple[str, dict]]] = {}
     standalone: list[tuple[str, dict]] = []
-    for line in path.read_text().splitlines():
+    for line in text.splitlines():
         m = TS_RE.match(line)
         if not m:
             continue
@@ -383,14 +380,18 @@ def _parse_log(path: Path, fid: str, avail: str) -> list[Obs]:
 # --------------------------------------------------------------------------- PDF
 
 
-def pdf_text(path: Path) -> str:
+def pdf_text(blob: bytes) -> str:
+    import io
+
     from pypdf import PdfReader
 
-    return "\n".join((p.extract_text() or "") for p in PdfReader(str(path)).pages)
+    return "\n".join(
+        (p.extract_text() or "") for p in PdfReader(io.BytesIO(blob)).pages
+    )
 
 
-def _parse_pdf(path: Path, fid: str, avail: str, aliases: dict[str, str]) -> list[Obs]:
-    text = pdf_text(path)
+def _parse_pdf(blob: bytes, fid: str, avail: str, aliases: dict[str, str]) -> list[Obs]:
+    text = pdf_text(blob)
     low = text.lower()
     emails = {e.lower() for e in EMAIL_RE.findall(text)}
     rids = set(
@@ -510,8 +511,7 @@ def _parse_vision(
 
 
 def load_activity() -> list[dict]:
-    with open(DATASET / "system_activity.csv", newline="") as f:
-        return list(csv.DictReader(f))
+    return src.rows("system_activity")
 
 
 def activity_aliases(activity: Iterable[dict]) -> dict[str, str]:
@@ -593,8 +593,7 @@ def activity_obs(activity: Iterable[dict]) -> list[Obs]:
 
 
 def load_manifest() -> list[dict]:
-    with open(DATASET / "evidence_files.csv", newline="") as f:
-        return list(csv.DictReader(f))
+    return src.rows("evidence_files")
 
 
 def load_all(vision: dict[str, dict] | None = None) -> tuple[list[Obs], list[dict]]:
@@ -603,18 +602,17 @@ def load_all(vision: dict[str, dict] | None = None) -> tuple[list[Obs], list[dic
     obs: list[Obs] = []
     for row in load_manifest():
         fid, rel, avail = row["file_id"], row["file_path"], row["captured_at"]
-        p = DATASET / rel
-        suf = p.suffix.lower()
+        suf = Path(rel).suffix.lower()
         if suf == ".sql":
-            obs += _parse_sql(p, fid, avail)
+            obs += _parse_sql(src.file_bytes(rel).decode(), fid, avail)
         elif suf == ".json":
-            obs += _parse_json(p, fid, avail)
+            obs += _parse_json(src.file_bytes(rel).decode(), fid, avail)
         elif suf == ".txt":
-            obs += _parse_txt(p, fid, avail)
+            obs += _parse_txt(src.file_bytes(rel).decode(), fid, avail)
         elif suf == ".log":
-            obs += _parse_log(p, fid, avail)
+            obs += _parse_log(src.file_bytes(rel).decode(), fid, avail)
         elif suf == ".pdf":
-            obs += _parse_pdf(p, fid, avail, aliases)
+            obs += _parse_pdf(src.file_bytes(rel), fid, avail, aliases)
         elif suf in {".png", ".jpg", ".jpeg"} and vision and fid in vision:
             obs += _parse_vision(fid, avail, vision[fid], row["origin"], aliases)
     obs += activity_obs(activity)

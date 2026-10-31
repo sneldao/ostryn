@@ -11,7 +11,9 @@ import argparse
 import csv
 from pathlib import Path
 
+import datasource
 from audit import Auditor, CaseResult, load_cases, steps_json
+from datasource import src
 from intent import classify_texts
 from vision import extract_all, load_cache
 
@@ -104,6 +106,17 @@ def main() -> None:
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--out", default=str(REPO_ROOT / "output.csv"))
     ap.add_argument(
+        "--source",
+        choices=["csv", "appwrite"],
+        help="data backend: local CSVs or Appwrite TablesDB "
+        "(default: $OSTRYN_SOURCE or csv)",
+    )
+    ap.add_argument(
+        "--push",
+        action="store_true",
+        help="upsert results into the Appwrite audit_results table",
+    )
+    ap.add_argument(
         "--agent",
         nargs="*",
         metavar="CASE_ID",
@@ -111,20 +124,29 @@ def main() -> None:
         "batch pipeline (default: first 8 eval cases)",
     )
     args = ap.parse_args()
+    datasource.init(args.source)
     if args.agent is not None:
-        ids = (
-            args.agent
-            or [
-                r["case_id"]
-                for r in csv.DictReader(
-                    open(REPO_ROOT / "dataset" / "deletion_requests.csv")
-                )
-            ][:8]
-        )
+        ids = args.agent or [c.case_id for c in load_cases("deletion_requests.csv")][:8]
         raise SystemExit(run_agent(ids, offline=args.offline))
     results = run(include_samples=False, offline=args.offline)
     write_output(results, Path(args.out))
     print(f"Wrote {len(results)} rows to {args.out}")
+    if args.push:
+        from datetime import UTC, datetime
+
+        now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        pushed = src.push_results(
+            [
+                {
+                    "case_id": r.case_id,
+                    "deletion_status": r.status,
+                    "steps_json": steps_json(r.steps),
+                    "audited_at": now,
+                }
+                for r in results
+            ]
+        )
+        print(f"Pushed {pushed} rows to Appwrite audit_results")
 
 
 if __name__ == "__main__":

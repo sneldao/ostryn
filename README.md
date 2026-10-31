@@ -18,6 +18,8 @@ Read [`problem_statement.md`](./problem_statement.md) for the challenge contract
 ```
 code/
 ├── main.py              Entry point: python3 code/main.py → writes output.csv
+├── datasource.py        Data-source abstraction: CSV files or Appwrite TablesDB
+├── seed_appwrite.py     Provisions the Appwrite schema + ingests the dataset
 ├── identity.py          Email → user_id + full current/historical identifier set
 ├── evidence.py          Parses every evidence format into typed observations
 ├── audit.py             Policy engine + state reconstruction + step assembler
@@ -25,8 +27,12 @@ code/
 ├── tools.py             AuditToolbox: per-case investigative tools over the engine
 ├── agent.py             AuditAgent: LLM tool-calling loop w/ guardrails + replay
 ├── respan_smoke.py      Standalone gateway/tracing wiring test
-└── evaluation/
-    └── main.py          Scoring harness vs labelled sample answers
+├── evaluation/
+│   └── main.py          Scoring harness vs labelled sample answers
+web/
+├── index.html           Deletion-audit explorer (reads TablesDB directly)
+├── app.js               Appwrite Web SDK client
+└── styles.css
 ```
 
 ### Pipeline (per case)
@@ -65,6 +71,24 @@ code/
 6. **Step assembly** — deterministic ordering: `FINDING` → `REMEDIATION` → `VERIFICATION`,
    then the operation order from the problem statement, then `system_id`, `resource_id`.
    Proposed remediation and post-remediation verification steps use `evidence_id: ""`.
+
+### Data backends (`datasource.py`)
+
+Every logical table — deletion requests, user identities, the identity audit
+log, the system-activity stream, deletion rules, the evidence manifest, and the
+evidence **file bytes themselves** (base64 in a `content_b64` column) — is read
+through a pluggable source:
+
+| Backend | Select with | Use |
+| --- | --- | --- |
+| `CsvSource` | `--source csv` (default) | original local `dataset/` reads |
+| `AppwriteSource` | `--source appwrite` | everything served from Appwrite TablesDB |
+
+The Appwrite database (`ostryn`) holds nine tables mirroring the dataset plus
+`audit_results`, which `main.py --push` upserts per `case_id`. The `web/`
+explorer reads `deletion_requests`, `audit_results`, `deletion_rules`, and
+`evidence_files` directly from TablesDB (public-read permissions) — the
+dashboard has no backend of its own.
 
 ### Agent layer (`agent.py` + `tools.py`)
 
@@ -142,6 +166,15 @@ Residual gaps trace to generator-internal IDs absent from participant data
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 python3 code/main.py                 # writes output.csv (518 rows)
 python3 code/evaluation/main.py      # scores the 32 sample cases
+```
+
+### Run on Appwrite TablesDB
+
+```bash
+# .env: APPWRITE_ENDPOINT / APPWRITE_PROJECT_ID / APPWRITE_API_KEY
+python3 code/seed_appwrite.py        # create schema + ingest dataset & evidence
+python3 code/main.py --source appwrite --offline --push
+python3 -m http.server -d web 8080   # → http://localhost:8080 dashboard
 ```
 
 ## Dataset

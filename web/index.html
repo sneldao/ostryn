@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ostryn — Deletion Audit Explorer</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@18.2.0"></script>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Ostryn</h1>
+      <p class="sub">Deletion-audit explorer · powered by Appwrite TablesDB</p>
+    </div>
+    <div id="stats"></div>
+  </header>
+
+  <main>
+    <aside>
+      <input id="search" type="search" placeholder="Search case id or email…" />
+      <div id="filters">
+        <button data-f="ALL" class="on">All</button>
+        <button data-f="COMPLETE">Complete</button>
+        <button data-f="INCOMPLETE">Incomplete</button>
+        <button data-f="NOT_APPLICABLE">N/A</button>
+      </div>
+      <ul id="cases"></ul>
+    </aside>
+
+    <section id="detail">
+      <div class="empty">Select a case to inspect its audit.</div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

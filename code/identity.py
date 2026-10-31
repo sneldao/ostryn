@@ -7,11 +7,10 @@ names are returned so evidence written under an old identifier still links.
 
 from __future__ import annotations
 
-import csv
 import hashlib
 from dataclasses import dataclass, field
 
-from evidence import DATASET
+from datasource import src
 
 
 @dataclass
@@ -35,10 +34,8 @@ class Identity:
 
 class IdentityIndex:
     def __init__(self) -> None:
-        with open(DATASET / "user_identities.csv", newline="") as f:
-            self.users = {r["user_id"]: r for r in csv.DictReader(f)}
-        with open(DATASET / "user_audit_log.csv", newline="") as f:
-            self.audit = list(csv.DictReader(f))
+        self.users = {r["user_id"]: r for r in src.rows("user_identities")}
+        self.audit = src.rows("user_audit_log")
         self.by_email: dict[str, set[str]] = {}
         for uid, r in self.users.items():
             self.by_email.setdefault(r["email"].lower(), set()).add(uid)

@@ -18,14 +18,15 @@ Pipeline per case
 
 from __future__ import annotations
 
-import csv
 import json
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import evidence as E
+from datasource import src
 from identity import Identity, IdentityIndex
 
 # ---------------------------------------------------------------- operations
@@ -91,8 +92,9 @@ TREATMENT_OPS = {
 
 
 def load_rules() -> dict[str, str]:
-    with open(E.DATASET / "deletion_rules.csv", newline="") as f:
-        return {r["data_category"]: r["required_action"] for r in csv.DictReader(f)}
+    return {
+        r["data_category"]: r["required_action"] for r in src.rows("deletion_rules")
+    }
 
 
 RULES = load_rules()
@@ -347,8 +349,10 @@ class CaseResult:
 
 
 def load_cases(fname: str) -> list[Case]:
-    with open(E.DATASET / fname, newline="") as f:
-        return [Case(**r) for r in csv.DictReader(f)]
+    fields = tuple(Case.__dataclass_fields__)
+    return [
+        Case(**{f: r.get(f, "") for f in fields}) for r in src.rows(Path(fname).stem)
+    ]
 
 
 # ---------------------------------------------------------------- auditor

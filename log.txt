@@ -301,3 +301,114 @@ branch=main
 repo_root=/Users/udingethe/Dev/ostryn
 worktree=main
 parent_agent=none
+
+## [2026-10-31T20:47:00Z] SESSION START
+
+tool=Devin CLI
+model=SWE-2 High
+Repo Root: /Users/udingethe/Dev/ostryn
+Branch: main
+Worktree: main
+Parent Agent: none
+Language: py
+Time Remaining: not configured
+
+## [2026-10-31T20:47:00Z] What is this project
+
+User Prompt (verbatim, secrets redacted):
+what is this project
+
+Agent Response Summary:
+Explained the repo: it is the HackerRank Orchestrate October 2026 challenge "Ghost Data Still Exists" — an AI-powered deletion-audit agent ("Ostryn"). The deterministic pipeline and an LLM tool-calling investigator already exist under code/, output.csv has been generated for all 518 cases, and evaluation against the labelled samples is in place.
+
+Actions:
+* inspected repo layout, README.md, code/, dataset/
+* appended SESSION START + per-turn entries to log.txt
+
+Context:
+tool=Devin CLI
+model=SWE-2 High
+branch=main
+repo_root=/Users/udingethe/Dev/ostryn
+worktree=main
+parent_agent=none
+
+## [2026-10-31T20:50:00Z] Prep for Appwrite Databases Hackathon submission
+
+User Prompt (verbatim, secrets redacted):
+help me get it ready to submit to "Pick a database. Build something great — Join the Appwrite Databases Hackathon..." (Appwrite hackathon page pasted; submissions close Oct 31, 2026 11:59 PM PT, ~9h remaining; judged on idea, execution, design, and usage of Appwrite Databases; solo; new code only after Oct 19)
+
+Agent Response Summary:
+Flagged the core mismatch: Ostryn uses no database and no Appwrite services, and the hackathon scores "Usage of Appwrite Databases" as a first-class criterion. Proposed adapting Ostryn onto Appwrite TablesDB (ingest dataset into tables, engine reads/writes via Appwrite, add a results dashboard) and asked the user to confirm direction, Appwrite account status, and database choice before proceeding.
+
+Actions:
+* appended per-turn entry to log.txt
+
+Context:
+tool=Devin CLI
+model=SWE-2 High
+branch=main
+repo_root=/Users/udingethe/Dev/ostryn
+worktree=main
+parent_agent=none
+
+## [2026-10-31T20:55:00Z] Appwrite TablesDB integration built (addendum)
+
+User Prompt (verbatim, secrets redacted):
+(continuation of previous turn — user chose: Adapt Ostryn / TablesDB / not signed up yet)
+
+Agent Response Summary:
+Built the full Appwrite TablesDB integration pending user credentials: datasource.py pluggable backend (csv default, appwrite via SDK), refactored all CSV/evidence loads through it (byte-level evidence blobs served from TablesDB), seed_appwrite.py provisions 8 tables + indexes + public-read perms and ingests the dataset incl. base64 evidence content, main.py gained --source/--push flags upserting audit_results, and a static web/ dashboard reads audit_results + deletion_requests via the Appwrite Web SDK. CSV-backend parity verified: regenerated output.csv is byte-identical. requirements.txt pinned appwrite==27.1.0.
+
+Actions:
+* wrote code/datasource.py, code/seed_appwrite.py, web/{index.html,app.js,styles.css,config.example.js}
+* edited code/{evidence,identity,audit,vision,main}.py loaders -> src.rows()/src.file_bytes()
+* .gitignore += web/config.js; requirements.txt += appwrite==27.1.0; README updated
+* ran .venv/bin/python code/main.py --offline twice -> 518 rows identical to prior output.csv
+* ruff clean on new files
+
+Context:
+tool=Devin CLI
+model=SWE-2 High
+branch=main
+repo_root=/Users/udingethe/Dev/ostryn
+worktree=main
+parent_agent=none
+
+## [2026-10-31T21:00:00Z] Stored Appwrite API key; awaiting endpoint + project id
+
+User Prompt (verbatim, secrets redacted):
+use this api key for appwrite - [REDACTED] -- set securely, let me know if that gives you everything you need
+
+Agent Response Summary:
+Appended APPWRITE_API_KEY to gitignored .env (verified `git check-ignore .env`). Explained the key alone is insufficient: the Appwrite API also requires APPWRITE_ENDPOINT (region URL) and APPWRITE_PROJECT_ID, both non-secret identifiers the user must paste from the console.
+
+Actions:
+* appended APPWRITE_API_KEY to .env (gitignored)
+
+Context:
+tool=Devin CLI
+model=SWE-2 High
+branch=main
+repo_root=/Users/udingethe/Dev/ostryn
+worktree=main
+parent_agent=none
+
+## [2026-10-31T21:02:00Z] API key cannot self-provision project/endpoint
+
+User Prompt (verbatim, secrets redacted):
+cant you use the api key to set all that up?
+
+Agent Response Summary:
+Explained that Appwrite server API keys are project-scoped credentials: they authenticate but every call still needs X-Appwrite-Project and the regional endpoint, which are not derivable from the key. Asked the user to paste the console project URL or the API Endpoint + Project ID from Settings.
+
+Actions:
+* appended per-turn entry to log.txt
+
+Context:
+tool=Devin CLI
+model=SWE-2 High
+branch=main
+repo_root=/Users/udingethe/Dev/ostryn
+worktree=main
+parent_agent=none
