@@ -12,7 +12,6 @@ __pycache__/
 
 # generated artifacts
 /output.csv
-/web/config.js
 
 # os
 .DS_Store
