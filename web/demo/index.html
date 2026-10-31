@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Ostryn — demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#0b0d12;--panel:#14171f;--panel2:#1a1e29;--edge:#262c3a;--text:#e8ecf4;--dim:#8a93a6;--ok:#3ddc84;--bad:#ff5c6c;--na:#8a93a6;--accent:#fd366e;--haunt:#9d7bff}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font-family:"Space Grotesk",sans-serif;height:100vh;overflow:hidden;
+  background-image:radial-gradient(1200px 500px at 80% -10%,rgba(253,54,110,.07),transparent 60%),radial-gradient(900px 500px at 10% 110%,rgba(157,123,255,.06),transparent 60%)}
+.scene{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:60px}
+.scene.on{display:flex;animation:fadein .6s ease both}
+@keyframes fadein{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes bloom{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+@keyframes tick{from{width:0}to{width:100%}}
+.ghost{color:var(--haunt);filter:drop-shadow(0 0 24px rgba(157,123,255,.6));animation:bob 3.4s ease-in-out infinite}
+h1.big{font-size:84px;letter-spacing:2px}
+.tag{color:var(--dim);font-size:22px;margin-top:12px;letter-spacing:.5px}
+.tag b{color:var(--haunt);font-weight:500}
+.cap{color:var(--dim);font-size:20px;margin-top:18px;letter-spacing:.4px}
+.cap b{color:var(--text)}
+.req{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:22px 30px;font-family:"JetBrains Mono",monospace;font-size:20px;display:flex;gap:18px;align-items:center}
+.req .st{color:var(--bad);font-weight:600}
+.ghosts{display:flex;gap:18px;margin-top:34px}
+.gchip{opacity:0;background:rgba(157,123,255,.08);border:1px solid rgba(157,123,255,.4);border-radius:10px;padding:14px 20px;font-family:"JetBrains Mono",monospace;font-size:15px;animation:bloom .5s ease forwards}
+.gchip small{display:block;color:var(--dim);font-size:11px;margin-top:4px}
+.gchip .p{color:var(--bad)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;width:1100px}
+.tbl{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:16px 18px;opacity:0;animation:bloom .4s ease forwards}
+.tbl .n{font-family:"JetBrains Mono",monospace;font-size:14px;color:var(--haunt)}
+.tbl .c{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px}
+.tbl .u{color:var(--dim);font-size:11px}
+.term{width:1100px;background:#0d0f14;border:1px solid var(--edge);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.term .bar{display:flex;gap:7px;padding:12px 16px;border-bottom:1px solid var(--edge)}
+.term .bar i{width:11px;height:11px;border-radius:50%;background:#333}
+.term .bar i:nth-child(1){background:#ff5f57}.term .bar i:nth-child(2){background:#febc2e}.term .bar i:nth-child(3){background:#28c840}
+.term .body{padding:22px 26px;font-family:"JetBrains Mono",monospace;font-size:19px;line-height:2}
+.term .p{color:var(--ok)}
+.term .cm{color:var(--dim)}
+.cursor::after{content:"▌";color:var(--haunt);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.stats{display:flex;gap:60px;margin-top:40px}
+.stat{text-align:center}
+.stat b{font-size:64px;display:block;font-variant-numeric:tabular-nums}
+.stat.i b{color:var(--bad)}.stat.c b{color:var(--ok)}.stat.n b{color:var(--na)}
+.stat span{color:var(--dim);letter-spacing:1.5px;font-size:14px}
+.url{font-family:"JetBrains Mono",monospace;color:var(--haunt);font-size:20px;margin-top:34px;border:1px solid rgba(157,123,255,.35);border-radius:10px;padding:12px 22px;background:rgba(157,123,255,.07)}
+.small{font-size:15px;color:var(--dim)}
+</style>
+</head>
+<body>
+
+<section class="scene" id="s0">
+  <svg class="ghost" viewBox="0 0 24 24" width="120" height="120"><path d="M12 2C7.6 2 4 5.6 4 10v10.2c0 .8.9 1.3 1.6.8l2-1.4 2 1.4c.5.3 1.1.3 1.6 0l2-1.4 2 1.4c.7.5 1.6 0 1.6-.8V10c0-4.4-3.6-8-8-8Z" fill="currentColor"/><circle cx="9.2" cy="10" r="1.6" fill="var(--bg)"/><circle cx="14.8" cy="10" r="1.6" fill="var(--bg)"/></svg>
+  <h1 class="big">Ostryn</h1>
+  <div class="tag">ghost-data deletion auditor · powered by <b>Appwrite TablesDB</b></div>
+</section>
+
+<section class="scene" id="s1">
+  <div class="req">case_101 <span class="small">· workflow reported</span> <span class="st">PARTIALLY_COMPLETE</span></div>
+  <div class="ghosts">
+    <div class="gchip" style="animation-delay:.8s">search_8561<small>search index</small><span class="p">still PRESENT</span></div>
+    <div class="gchip" style="animation-delay:1.5s">analytics_6105<small>analytics platform</small><span class="p">PII exposed</span></div>
+    <div class="gchip" style="animation-delay:2.2s">backup_2974<small>backup archive</small><span class="p">can restore</span></div>
+  </div>
+  <div class="cap" style="animation:fadein .6s ease 3s both">the workflow reported progress — <b>the evidence disagreed</b></div>
+</section>
+
+<section class="scene" id="s2">
+  <div class="cap" style="margin-bottom:30px">the whole audit lives in <b>one TablesDB database</b></div>
+  <div class="grid" id="tables"></div>
+  <div class="cap" style="animation:fadein .6s ease 2.6s both;margin-top:30px">…even the evidence files — <b>every byte stored in a column</b></div>
+</section>
+
+<section class="scene" id="s3">
+  <div class="term">
+    <div class="bar"><i></i><i></i><i></i></div>
+    <div class="body">
+      <div class="cm"># audit all 518 requests, data served by TablesDB</div>
+      <div><span class="p">$</span> <span id="typer" class="cursor"></span></div>
+      <div id="out"></div>
+    </div>
+  </div>
+  <div class="stats" id="counters" style="opacity:0;transition:opacity .6s">
+    <div class="stat c"><b data-n="153">0</b><span>COMPLETE</span></div>
+    <div class="stat i"><b data-n="355">0</b><span>INCOMPLETE</span></div>
+    <div class="stat n"><b data-n="10">0</b><span>N / A</span></div>
+  </div>
+</section>
+
+<section class="scene" id="s5">
+  <svg class="ghost" viewBox="0 0 24 24" width="90" height="90"><path d="M12 2C7.6 2 4 5.6 4 10v10.2c0 .8.9 1.3 1.6.8l2-1.4 2 1.4c.5.3 1.1.3 1.6 0l2-1.4 2 1.4c.7.5 1.6 0 1.6-.8V10c0-4.4-3.6-8-8-8Z" fill="currentColor"/><circle cx="9.2" cy="10" r="1.6" fill="var(--bg)"/><circle cx="14.8" cy="10" r="1.6" fill="var(--bg)"/></svg>
+  <h1 class="big" style="font-size:54px">518 audits · one database · zero servers</h1>
+  <div class="url">github.com/sneldao/ostryn</div>
+</section>
+
+<script>
+const TABLES=[["deletion_requests",518],["sample_deletion_requests",32],["user_identities",850],
+["user_audit_log",306],["system_activity",4011],["deletion_rules",15],["evidence_files",94],["audit_results",518]];
+function go(id){document.querySelectorAll(".scene").forEach(s=>s.classList.toggle("on",s.id===id));
+  if(id==="s2")buildTables();if(id==="s3")typeRun();}
+addEventListener("hashchange",()=>go(location.hash.slice(1)||"s0"));
+function countup(el){const n=+el.dataset.n,t0=performance.now();(function t(x){const k=Math.min((x-t0)/900,1);
+  el.textContent=Math.round(n*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(t)})(t0)}
+function buildTables(){const g=document.getElementById("tables");g.innerHTML="";
+  TABLES.forEach(([n,c],i)=>{const d=document.createElement("div");d.className="tbl";
+    d.style.animationDelay=(i*.18)+"s";d.innerHTML=`<div class="n">${n}</div><div class="c" data-n="${c}">0</div><div class="u">rows</div>`;
+    g.appendChild(d);setTimeout(()=>countup(d.querySelector(".c")),i*180+300)})}
+function typeRun(){const cmd="python3 code/main.py --source appwrite --offline --push";
+  const t=document.getElementById("typer"),o=document.getElementById("out");
+  t.textContent="";o.innerHTML="";document.getElementById("counters").style.opacity=0;
+  let i=0;(function tick(){if(i<=cmd.length){t.textContent=cmd.slice(0,i++);setTimeout(tick,28)}
+    else{t.classList.remove("cursor");
+      o.innerHTML='<div class="cm">Wrote 518 rows to output.csv</div><div>Pushed 518 rows to Appwrite audit_results</div>';
+      document.getElementById("counters").style.opacity=1;
+      document.querySelectorAll("#counters b").forEach(countup)}})()}
+go(location.hash.slice(1)||"s0");
+</script>
+</body>
+</html>
